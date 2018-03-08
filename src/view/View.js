@@ -1205,13 +1205,14 @@ new function() { // Injection scope for event handling on the browser
         // Various variables required by #_handleMouseEvent()
         wasInView = false,
         overView,
+        previousDownPoint,
         downPoint,
         lastPoint,
         downItem,
         overItem,
         dragItem,
-        clickItem,
-        clickTime,
+        previousMouseDownTime,
+        mouseDownTime,
         dblClick;
 
     // Returns true if event was prevented, false otherwise.
@@ -1391,12 +1392,7 @@ new function() { // Injection scope for event handling on the browser
             if (mouse.down && inView || mouse.up && downPoint) {
                 emitMouseEvents(this, hitItem, type, event, point, downPoint);
                 if (mouse.down) {
-                    // See if we're clicking again on the same item, within the
-                    // double-click time. Firefox uses 300ms as the max time
-                    // difference:
-                    dblClick = hitItem === clickItem
-                        && (Date.now() - clickTime < 300);
-                    downItem = clickItem = hitItem;
+                    downItem = hitItem;
                     // Only start dragging if the mousedown event has not
                     // prevented the default, and if the hitItem or any of its
                     // parents actually respond to mousedrag events.
@@ -1407,15 +1403,20 @@ new function() { // Injection scope for event handling on the browser
                         if (item)
                             dragItem = hitItem;
                     }
+                    if (mouseDownTime)
+                        previousMouseDownTime = mouseDownTime;
+                    mouseDownTime = Date.now();
+                    if (downPoint)
+                        previousDownPoint = downPoint;
                     downPoint = point;
                 } else if (mouse.up) {
                     // Emulate click / doubleclick, but only on the hit-item,
                     // not the view.
                     if (!prevented && hitItem === downItem) {
-                        clickTime = Date.now();
+                        dblClick = Date.now() - previousMouseDownTime < 300
+                            && previousDownPoint.subtract(point).length < 3;
                         emitMouseEvents(this, hitItem, dblClick ? 'doubleclick'
                                 : 'click', event, point, downPoint);
-                        dblClick = false;
                     }
                     downItem = dragItem = null;
                 }
